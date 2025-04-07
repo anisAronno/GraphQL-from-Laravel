@@ -52,7 +52,15 @@ type User {
     updated_at: DateTime!
 
     "Posts created by this user."
-    posts: [Post!]! @hasMany
+    posts(
+        "Filter by title. Accepts SQL LIKE wildcards `%` and `_`."
+        title: String @where(operator: "like")
+    ): [Post!]! @hasMany(
+        paginate: true,
+        type: PAGINATOR,
+        defaultCount: 10
+    )
+
 }
 
 "A blog post created by a user."
