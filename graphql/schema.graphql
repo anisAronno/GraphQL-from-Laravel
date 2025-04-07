@@ -69,6 +69,9 @@ type Post {
     "ID of the user who created this post."
     user_id: ID!
 
+    author_name: String!
+        @field(resolver: "App\\GraphQL\\Resolvers\\PostResolver@authorName")
+
     "The user who created this post."
     user: User! @belongsTo
 
