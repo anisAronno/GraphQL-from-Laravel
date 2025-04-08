@@ -1,0 +1,110 @@
+query GetUserById {
+    user(id: 1) {
+        id
+        name
+        email
+        email_verified_at
+        created_at
+        updated_at
+        posts(first: 30, page: 1, title: "%an%") {
+            data {
+                id
+                title
+                body
+            }
+            paginatorInfo {
+                currentPage
+                lastPage
+                perPage
+                total
+                count
+            }
+        }
+    }
+}
+
+query GetUserByEmail {
+    user(email: "example@email.com") {
+        id
+        name
+        email
+        email_verified_at
+        created_at
+        updated_at
+    }
+}
+
+query GetAllUsers {
+    users(first: 10, page: 1) {
+        data {
+            id
+            name
+            email
+            created_at
+        }
+        paginatorInfo {
+            currentPage
+            lastPage
+            total
+            hasMorePages
+        }
+    }
+}
+
+query GetUsersByName {
+    users(first: 10, page: 1, name: "John%") {
+        data {
+            id
+            name
+            created_at
+            email
+        }
+        paginatorInfo {
+            total
+            currentPage
+        }
+    }
+}
+
+query GetPostById {
+    post(id: 1) {
+        id
+        title
+        body
+        created_at
+        updated_at
+        author_name
+        author: user {
+            name
+        }
+    }
+}
+
+query GetPostsByTitle {
+    posts(first: 10, page: 1, title: "m%") {
+        data {
+            id
+            title
+            body
+            author_name
+        }
+    }
+}
+
+query GetAllPosts {
+    posts(first: 10, page: 1) {
+        data {
+            id
+            title
+            body
+            created_at
+            author_name
+        }
+        paginatorInfo {
+            currentPage
+            lastPage
+            total
+            hasMorePages
+        }
+    }
+}
