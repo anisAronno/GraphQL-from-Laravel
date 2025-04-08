@@ -1,4 +1,3 @@
-<!-- src/components/PostSearch.vue -->
 <template>
     <div class="mb-5 flex gap-2">
         <input 
@@ -24,29 +23,41 @@
     </div>
 </template>
 
-<script>
-import { ref } from 'vue'
+<script setup>
+import { ref, onMounted, watch } from 'vue';
 
-export default {
-    name: 'PostSearch',
-    emits: ['search'],
-    setup(props, { emit }) {
-        const titleQuery = ref('')
-        
-        const search = () => {
-            emit('search', titleQuery.value ? `${titleQuery.value}%` : '')
-        }
-        
-        const clearSearch = () => {
-            titleQuery.value = ''
-            emit('search', '')
-        }
-        
-        return {
-            titleQuery,
-            search,
-            clearSearch
-        }
+const props = defineProps({
+    initialSearch: {
+        type: String,
+        default: ''
     }
-}
+});
+
+const emit = defineEmits(['search']);
+const titleQuery = ref('');
+
+// Clean the search term (remove % if present)
+const cleanSearchTerm = (term) => {
+    return term ? term.replace(/%$/, '') : '';
+};
+
+// Set initial value from props
+onMounted(() => {
+    titleQuery.value = cleanSearchTerm(props.initialSearch);
+});
+
+// Watch for changes in initialSearch prop
+watch(() => props.initialSearch, (newValue) => {
+    titleQuery.value = cleanSearchTerm(newValue);
+});
+
+const search = () => {
+    // Add % only when emitting the search event
+    emit('search', titleQuery.value ? `${titleQuery.value}%` : '');
+};
+
+const clearSearch = () => {
+    titleQuery.value = '';
+    emit('search', '');
+};
 </script>

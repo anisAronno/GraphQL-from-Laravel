@@ -2,8 +2,8 @@
     <div>
         <h1 class="text-2xl font-bold mb-6">Blog Posts</h1>
 
-        <!-- Search component -->
-        <PostSearch @search="onSearch" />
+        <!-- Search component with initial value -->
+        <PostSearch @search="onSearch" :initialSearch="searchTitle" />
 
         <!-- Loading state -->
         <div v-if="loading" class="text-center my-5 p-5 bg-gray-50 rounded-lg">
@@ -76,119 +76,110 @@
     </div>
 </template>
 
-<script>
-import { ref, computed } from "vue";
+<script setup>
+import { ref, computed, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { useQuery } from "@vue/apollo-composable";
 import gql from "graphql-tag";
 import PostSearch from "./PostSearch.vue";
 
-export default {
-    name: "PostList",
-    components: {
-        PostSearch,
+const route = useRoute();
+const router = useRouter();
+const pageSize = ref(12);
+
+// Get values from route
+const currentPage = ref(parseInt(route.query.page) || 1);
+const searchTitle = ref(route.query.search || "");
+
+// Watch for route changes
+watch(
+    () => route.query,
+    (newQuery) => {
+        currentPage.value = parseInt(newQuery.page) || 1;
+        searchTitle.value = newQuery.search || "";
+        refetch();
     },
-    setup() {
-        const currentPage = ref(1);
-        const pageSize = ref(12);
-        const searchTitle = ref("");
+    { deep: true }
+);
 
-        // GraphQL query for posts
-        const GET_POSTS = gql`
-            query GetPosts($first: Int!, $page: Int!, $title: String) {
-                posts(first: $first, page: $page, title: $title) {
-                    data {
-                        id
-                        title
-                        body
-                        created_at
-                        author_name
-                    }
-                    paginatorInfo {
-                        currentPage
-                        lastPage
-                        total
-                        hasMorePages
-                    }
-                }
+// GraphQL query
+const GET_POSTS = gql`
+    query GetPosts($first: Int!, $page: Int!, $title: String) {
+        posts(first: $first, page: $page, title: $title) {
+            data {
+                id
+                title
+                body
+                created_at
+                author_name
             }
-        `;
-
-        // Execute the query
-        const { result, loading, error, refetch } = useQuery(GET_POSTS, () => ({
-            first: pageSize.value,
-            page: currentPage.value,
-            title: searchTitle.value || undefined,
-        }));
-
-        // Computed properties for posts and pagination info
-        const posts = computed(() => {
-            return result.value?.posts?.data || [];
-        });
-
-        const paginatorInfo = computed(() => {
-            return (
-                result.value?.posts?.paginatorInfo || {
-                    currentPage: 1,
-                    lastPage: 1,
-                    total: 0,
-                    hasMorePages: false,
-                }
-            );
-        });
-
-        const totalPages = computed(() => {
-            return paginatorInfo.value.lastPage;
-        });
-
-        // Pagination methods
-        const nextPage = async () => {
-            if (currentPage.value < totalPages.value) {
-                currentPage.value++;
-                await refetch();
+            paginatorInfo {
+                currentPage
+                lastPage
+                total
+                hasMorePages
             }
-        };
+        }
+    }
+`;
 
-        const previousPage = async () => {
-            if (currentPage.value > 1) {
-                currentPage.value--;
-                await refetch();
-            }
-        };
+// Execute query
+const { result, loading, error, refetch } = useQuery(GET_POSTS, () => ({
+    first: pageSize.value,
+    page: currentPage.value,
+    title: searchTitle.value || undefined,
+}));
 
-        // Search functionality
-        const onSearch = async (query) => {
-            searchTitle.value = query;
-            currentPage.value = 1; // Reset to first page when searching
-            await refetch();
-        };
+// Computed properties
+const posts = computed(() => result.value?.posts?.data || []);
+const paginatorInfo = computed(
+    () =>
+        result.value?.posts?.paginatorInfo || {
+            currentPage: 1,
+            lastPage: 1,
+            total: 0,
+            hasMorePages: false,
+        }
+);
+const totalPages = computed(() => paginatorInfo.value.lastPage);
 
-        // Format date helper
-        const formatDate = (dateString) => {
-            const date = new Date(dateString);
-            return date.toLocaleDateString();
-        };
+// Navigation methods
+const nextPage = async () => {
+    if (currentPage.value < totalPages.value) {
+        await updateRoute(currentPage.value + 1, searchTitle.value);
+    }
+};
 
-        // Truncate text helper
-        const truncate = (text, length) => {
-            if (!text) return "";
-            return text.length > length
-                ? `${text.substring(0, length)}...`
-                : text;
-        };
+const previousPage = async () => {
+    if (currentPage.value > 1) {
+        await updateRoute(currentPage.value - 1, searchTitle.value);
+    }
+};
 
-        return {
-            posts,
-            loading,
-            error,
-            currentPage,
-            totalPages,
-            paginatorInfo,
-            nextPage,
-            previousPage,
-            onSearch,
-            formatDate,
-            truncate,
-        };
-    },
+// Update route helper
+const updateRoute = async (page, search) => {
+    await router.push({
+        path: "/",
+        query: {
+            ...(page > 1 && { page }),
+            ...(search && { search }),
+        },
+    });
+};
+
+// Search functionality
+const onSearch = async (query) => {
+    await updateRoute(1, query); // Reset to page 1 when searching
+};
+
+// Helper functions
+const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
+};
+
+const truncate = (text, length) => {
+    if (!text) return "";
+    return text.length > length ? `${text.substring(0, length)}...` : text;
 };
 </script>
